@@ -32,18 +32,24 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.13'
+
+      - name: Restore Kotlin source
+        run: |
+          rm -f app/src/main/java/com/pianopath/app/MainActivity.java
+          mkdir -p app/src/main/java/com/pianopath/app
+          cat source_chunks/MainActivity.part* | base64 --decode | gzip --decompress > app/src/main/java/com/pianopath/app/MainActivity.kt
 
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
       - name: Prepare downloadable APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk PianoPath-v0.1.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk PianoPath-v0.2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PianoPath-v0.1-APK
-          path: PianoPath-v0.1.apk
+          name: PianoPath-v0.2-APK
+          path: PianoPath-v0.2.apk
           if-no-files-found: error
           retention-days: 30
