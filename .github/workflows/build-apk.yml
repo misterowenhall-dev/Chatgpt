@@ -41,7 +41,28 @@ jobs:
           cat source_chunks/MainActivity.part* | base64 --decode | gzip --decompress > app/src/main/java/com/pianopath/app/MainActivity.kt
 
       - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+        shell: bash
+        run: |
+          set +e
+          gradle --no-daemon assembleDebug > build.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "=== COMPILER ERRORS ==="
+            grep -E "(^e: |error:|FAILURE:|What went wrong|Unresolved reference|Cannot access|Type mismatch|No value passed)" build.log | tail -250 || true
+            echo "=== LOG TAIL ==="
+            tail -120 build.log
+            exit "$status"
+          fi
+          tail -40 build.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PianoPath-v0.2-build-log
+          path: build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Prepare downloadable APK
         run: cp app/build/outputs/apk/debug/app-debug.apk PianoPath-v0.2.apk
