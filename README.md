@@ -1,3 +1,3 @@
-# PianoPath Android
+# PianoPath v0.3
 
-Temporary build repository for the standalone PianoPath Android app.
+MIDI-only Android piano-learning vertical slice with adaptive exercises.

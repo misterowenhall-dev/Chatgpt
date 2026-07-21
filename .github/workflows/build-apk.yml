@@ -1,8 +1,8 @@
-name: Build PianoPath APK
+name: Build PianoPath v0.3 APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, agent/build-pianopath-apk]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -23,24 +23,51 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.13'
 
-      - name: Install Android SDK 35
-        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Patch Compose import
+        run: sed -i 's/import androidx.compose.ui.draw.graphicsLayer/import androidx.compose.ui.graphics.graphicsLayer/' app/src/main/java/com/pianopath/app/Screens.kt
 
       - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+        shell: bash
+        run: |
+          set +e
+          gradle --no-daemon assembleDebug > build.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "=== COMPILER ERRORS ==="
+            grep -E "(^e: |error:|FAILURE:|What went wrong|Unresolved reference|Cannot access|Type mismatch|No value passed|Expecting)" build.log | tail -300 || true
+            echo "=== LOG TAIL ==="
+            tail -140 build.log
+            exit "$status"
+          fi
+          tail -40 build.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PianoPath-v0.3-build-log
+          path: build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Prepare downloadable APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk PianoPath-v0.1.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk PianoPath-v0.3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PianoPath-v0.1-APK
-          path: PianoPath-v0.1.apk
+          name: PianoPath-v0.3-APK
+          path: PianoPath-v0.3.apk
           if-no-files-found: error
           retention-days: 30
